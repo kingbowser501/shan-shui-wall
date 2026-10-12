@@ -26,8 +26,9 @@ import androidx.webkit.WebViewAssetLoader
  *
  * - Keeps the screen on and hides the system bars.
  * - Recreates the WebView if its renderer ever crashes, so the frame recovers on its own.
+ * - Loads the painting from the built-in wall server, so the phone remote works.
  * - Back is ignored. Tapping the top-left corner 5 times opens a small admin menu
- *   (reload, Wi-Fi, Android settings, auto-start permission, leave).
+ *   (remote address, reload, Wi-Fi, Android settings, auto-start permission, leave).
  */
 class MainActivity : Activity() {
 
@@ -89,7 +90,7 @@ class MainActivity : Activity() {
         }
         web = view
         setContentView(view)
-        view.loadUrl(Frame.START_URL)
+        view.loadUrl(Frame.startUrl(this))
     }
 
     private fun hideSystemBars() {
@@ -139,8 +140,12 @@ class MainActivity : Activity() {
         items += "Choose home screen" to { startActivity(Intent(Settings.ACTION_HOME_SETTINGS)) }
         items += "Close Shan Shui" to { finishAndRemoveTask() }
 
+        val server = Frame.server(this)
         AlertDialog.Builder(this)
-            .setTitle("Shan Shui ${Frame.version(this)}")
+            .setTitle(
+                "Shan Shui ${Frame.version(this)}\n" +
+                    if (server.running) "Phone remote: ${server.remoteUrl()}" else "Phone remote unavailable"
+            )
             .setItems(items.map { it.first }.toTypedArray()) { _, i -> items[i].second() }
             .setNegativeButton("Back to painting", null)
             .show()
