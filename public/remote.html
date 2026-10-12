@@ -1,0 +1,199 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#efe6d2">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<title>Shan Shui Remote</title>
+<style>
+  :root {
+    --paper: #efe6d2;
+    --card: #f7f1e3;
+    --ink: #2b2620;
+    --muted: #7a6f60;
+    --line: rgba(43, 38, 32, 0.14);
+    --seal: #b0302a;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --paper: #1b1916;
+      --card: #24211d;
+      --ink: #ece4d4;
+      --muted: #a59a88;
+      --line: rgba(236, 228, 212, 0.14);
+      --seal: #d0463d;
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--paper);
+    color: var(--ink);
+    font: 16px/1.4 "Iowan Old Style", Palatino, Georgia, serif;
+    padding: max(20px, env(safe-area-inset-top)) 16px max(24px, env(safe-area-inset-bottom));
+    -webkit-tap-highlight-color: transparent;
+  }
+  main { max-width: 440px; margin: 0 auto; display: grid; gap: 14px; }
+  header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px; }
+  h1 { font-size: 26px; font-weight: 500; margin: 0; letter-spacing: 0.02em; }
+  h1 span { color: var(--seal); }
+  .status { font-size: 13px; color: var(--muted); display: flex; align-items: center; gap: 6px; }
+  .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--muted); }
+  .dot.on { background: #4f8a4b; }
+  .card {
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    padding: 16px;
+  }
+  .row { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 10px; }
+  label { font-size: 15px; }
+  .val { font-size: 13px; color: var(--muted); font-variant-numeric: tabular-nums; }
+  input[type=range] { width: 100%; accent-color: var(--ink); height: 32px; margin: 0; }
+  button {
+    font: inherit;
+    color: var(--ink);
+    background: transparent;
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    padding: 14px 16px;
+    min-height: 48px;
+    cursor: pointer;
+  }
+  button:active { transform: scale(0.98); }
+  .play {
+    width: 100%;
+    font-size: 20px;
+    background: var(--ink);
+    color: var(--paper);
+    border: none;
+  }
+  .new { width: 100%; border-color: var(--seal); color: var(--seal); font-size: 17px; }
+  .seed { display: flex; gap: 8px; }
+  .seed input {
+    flex: 1;
+    min-width: 0;
+    font: inherit;
+    color: var(--ink);
+    background: var(--paper);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    padding: 10px 12px;
+  }
+  .seed button { padding: 10px 14px; min-height: 0; }
+  .small { font-size: 13px; color: var(--muted); }
+  .links { display: flex; justify-content: space-between; align-items: center; }
+  .links button { padding: 8px 12px; min-height: 0; font-size: 14px; }
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <h1>山水 <span>·</span> Remote</h1>
+    <div class="status"><span class="dot" id="dot"></span><span id="status">Connecting…</span></div>
+  </header>
+
+  <button class="play" id="play">Pause</button>
+
+  <div class="card">
+    <div class="row"><label for="speed">Drift speed</label><span class="val" id="speedVal"></span></div>
+    <input type="range" id="speed" min="0" max="100" step="1">
+  </div>
+
+  <div class="card">
+    <div class="row"><label for="bright">Brightness</label><span class="val" id="brightVal"></span></div>
+    <input type="range" id="bright" min="10" max="100" step="1">
+  </div>
+
+  <button class="new" id="new">Paint a new landscape</button>
+
+  <div class="card">
+    <div class="row"><label for="seed">Landscape seed</label><span class="val">same seed, same landscape</span></div>
+    <div class="seed">
+      <input id="seed" autocomplete="off" autocapitalize="off" spellcheck="false">
+      <button id="go">Go</button>
+    </div>
+  </div>
+
+  <div class="links">
+    <span class="small">Based on {Shan, Shui}* by Lingdong Huang</span>
+    <button id="reload" title="Reload the painting page">Reload display</button>
+  </div>
+</main>
+
+<script>
+"use strict";
+const $ = (id) => document.getElementById(id);
+const SCREEN_W = 700 * 16 / 9; // world units across a 16:9 screen
+
+// Speed slider is exponential so fine control lives at the slow end.
+const toSpeed = (v) => (v == 0 ? 0 : +(0.5 * Math.pow(120, v / 100)).toFixed(2));
+const fromSpeed = (s) => (s <= 0 ? 0 : Math.round((100 * Math.log(s / 0.5)) / Math.log(120)));
+
+let state = {};
+let editing = null; // slider being dragged, so incoming updates don't fight the thumb
+
+function post(path, body) {
+  return fetch(path, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: body ? JSON.stringify(body) : undefined,
+  });
+}
+
+function speedLabel(s) {
+  if (!s) return "still";
+  const min = SCREEN_W / s / 60;
+  return min < 1 ? `a screen every ${Math.round(min * 60)} s` : `a screen every ${min.toFixed(min < 10 ? 1 : 0)} min`;
+}
+
+function render() {
+  $("play").textContent = state.paused ? "Play" : "Pause";
+  if (editing !== "speed") $("speed").value = fromSpeed(state.speed);
+  if (editing !== "bright") $("bright").value = Math.round(state.brightness * 100);
+  $("speedVal").textContent = speedLabel(toSpeed(+$("speed").value));
+  $("brightVal").textContent = $("bright").value + "%";
+  if (document.activeElement !== $("seed")) $("seed").value = state.seed;
+  const on = state.displays > 0;
+  $("dot").classList.toggle("on", on);
+  $("status").textContent = on ? (state.displays > 1 ? `${state.displays} displays` : "Display on") : "No display";
+}
+
+let pending = null;
+function sendSoon(patch) {
+  clearTimeout(pending);
+  pending = setTimeout(() => post("api/state", patch), 120);
+}
+
+$("play").onclick = () => post("api/state", { paused: !state.paused });
+$("new").onclick = () => post("api/new");
+$("go").onclick = () => $("seed").value.trim() && post("api/state", { seed: $("seed").value.trim() });
+$("seed").onkeydown = (e) => e.key === "Enter" && $("go").click();
+$("reload").onclick = () => post("api/reload");
+
+for (const [id, key, conv] of [["speed", "speed", toSpeed], ["bright", "brightness", (v) => v / 100]]) {
+  const el = $(id);
+  el.oninput = () => {
+    editing = id;
+    render();
+    sendSoon({ [key]: conv(+el.value) });
+  };
+  el.onchange = () => (editing = null);
+}
+
+function connect() {
+  const es = new EventSource("api/events?role=remote");
+  es.addEventListener("state", (e) => {
+    state = JSON.parse(e.data);
+    render();
+  });
+  es.onerror = () => {
+    $("dot").classList.remove("on");
+    $("status").textContent = "Reconnecting…";
+  };
+}
+connect();
+</script>
+</body>
+</html>

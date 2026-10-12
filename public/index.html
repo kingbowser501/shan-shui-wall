@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Shan Shui</title>
+<style>
+  html, body {
+    margin: 0;
+    height: 100%;
+    overflow: hidden;
+    background: #f0e4cc; /* average tone of the paper the tiles are painted on */
+    cursor: none;
+  }
+  #stage {
+    position: fixed;
+    inset: 0;
+    overflow: hidden;
+  }
+  .strip {
+    position: absolute;
+    top: 0;
+    left: 0;
+    height: 100%;
+    will-change: transform, opacity;
+    transition: opacity 6s ease-in-out;
+  }
+  .strip canvas {
+    position: absolute;
+    top: 0;
+    height: 100%;
+  }
+  #dim {
+    position: fixed;
+    inset: 0;
+    background: #000;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 1.5s;
+  }
+  #hint {
+    position: fixed;
+    left: 2.2vh;
+    bottom: 2vh;
+    font: 1.6vh/1.4 "Iowan Old Style", Palatino, Georgia, serif;
+    color: rgba(60, 50, 40, 0.55);
+    opacity: 0;
+    transition: opacity 2s;
+    pointer-events: none;
+  }
+  #stats {
+    position: fixed;
+    top: 12px;
+    left: 12px;
+    max-width: calc(100vw - 24px);
+    margin: 0;
+    padding: 10px 12px;
+    font: 13px/1.45 ui-monospace, Menlo, Consolas, monospace;
+    color: #f4efe4;
+    background: rgba(20, 18, 15, 0.78);
+    border-radius: 8px;
+    white-space: pre-wrap;
+    word-break: break-all;
+  }
+</style>
+</head>
+<body>
+<div id="stage"></div>
+<div id="dim"></div>
+<div id="hint"></div>
+<pre id="stats" hidden></pre>
+<script src="painting.js"></script>
+</body>
+</html>

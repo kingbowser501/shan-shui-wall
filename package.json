@@ -1,0 +1,14 @@
+{
+  "name": "shan-shui-wall",
+  "version": "0.1.0",
+  "description": "A living Shan Shui landscape painting for a wall display, based on {Shan, Shui}* by Lingdong Huang",
+  "private": true,
+  "license": "MIT",
+  "scripts": {
+    "start": "node server.js",
+    "extract-engine": "node scripts/extract-engine.mjs"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}
