@@ -1,0 +1,9 @@
+<resources>
+    <style name="Frame" parent="android:Theme.Material.NoActionBar.Fullscreen">
+        <item name="android:windowBackground">@color/paper</item>
+        <item name="android:windowLayoutInDisplayCutoutMode">shortEdges</item>
+    </style>
+    <color name="paper">#F0E4CC</color>
+    <color name="ink">#2B2620</color>
+    <color name="seal">#B0302A</color>
+</resources>
