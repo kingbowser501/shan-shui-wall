@@ -51,7 +51,43 @@ healthy result shows about 60 fps, few or no janky frames, and "waited for
 tiles 0×". Tile generation time only needs to stay well under the budget line
 (about 85 s per tile at the default speed).
 
-## Raspberry Pi kiosk (suggested setup)
+## Android frame app
+
+`android/` is a small app for Android art frames (built for a 27" RK3566
+frame on Android 14). It makes the frame self-contained:
+
+- **Boots into the painting**, full screen with the screen kept on. It reopens
+  after a power cut or an app update, and recovers if the browser engine crashes.
+- **Runs the wall server inside the frame** (a Kotlin port of `server.js`
+  with the same API). Phones on the same Wi-Fi open
+  `http://<frame-ip>:8080/remote`. The address shows on screen for 20 s at
+  startup and in the admin menu.
+- **Dims the real backlight** when you lower brightness on the remote, rather
+  than darkening the picture.
+- **Admin menu:** tap the top-left corner 5 times for the remote address,
+  reload, Wi-Fi and Android settings, and exit.
+
+Build (needs JDK 17 and the Android SDK):
+
+```bash
+cd android && ./gradlew assembleRelease
+```
+
+The APK is `android/app/build/outputs/apk/release/app-release.apk`. It's
+signed with this machine's debug key, so later updates must be built here too
+(or Android will refuse to install them over the old version).
+
+Set up on the frame:
+
+1. Install the APK (copy it over on a USB stick and open it, or use `adb install`).
+2. Open **Shan Shui**. When it asks to start automatically, open the setting
+   and switch on **Display over other apps**, then press Back.
+3. Optionally, also point the frame's own "auto-launch app" setting at
+   Shan Shui, or choose it as the home screen from the admin menu.
+4. Leave it on for half an hour before the first power-cut test, because
+   Android saves that permission to disk on a delay.
+
+
 
 On a Pi 4 or 5 running Raspberry Pi OS (desktop):
 

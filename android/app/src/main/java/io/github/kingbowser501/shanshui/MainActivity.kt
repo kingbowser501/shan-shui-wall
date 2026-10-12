@@ -14,6 +14,7 @@ import android.view.ViewGroup
 import android.view.WindowInsets
 import android.view.WindowInsetsController
 import android.view.WindowManager
+import android.webkit.JavascriptInterface
 import android.webkit.RenderProcessGoneDetail
 import android.webkit.WebResourceRequest
 import android.webkit.WebResourceResponse
@@ -27,6 +28,8 @@ import androidx.webkit.WebViewAssetLoader
  * - Keeps the screen on and hides the system bars.
  * - Recreates the WebView if its renderer ever crashes, so the frame recovers on its own.
  * - Loads the painting from the built-in wall server, so the phone remote works.
+ * - Gives the page a `ShanShuiFrame` bridge so brightness sets the real backlight
+ *   instead of darkening the picture.
  * - Back is ignored. Tapping the top-left corner 5 times opens a small admin menu
  *   (remote address, reload, Wi-Fi, Android settings, auto-start permission, leave).
  */
@@ -78,6 +81,10 @@ class MainActivity : Activity() {
             settings.domStorageEnabled = true
             settings.mediaPlaybackRequiresUserGesture = false
             webViewClient = object : WebViewClient() {
+                // Kiosk: never navigate away from the painting.
+                override fun shouldOverrideUrlLoading(view: WebView, request: WebResourceRequest): Boolean =
+                    request.url.host != "127.0.0.1" && request.url.host != "appassets.androidplatform.net"
+
                 override fun shouldInterceptRequest(view: WebView, request: WebResourceRequest): WebResourceResponse? =
                     assets.shouldInterceptRequest(request.url)
 
@@ -88,6 +95,7 @@ class MainActivity : Activity() {
                 }
             }
         }
+        view.addJavascriptInterface(Bridge(), "ShanShuiFrame")
         web = view
         setContentView(view)
         view.loadUrl(Frame.startUrl(this))
@@ -108,6 +116,27 @@ class MainActivity : Activity() {
                 or View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION
                 or View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN)
         }
+    }
+
+    // ------------------------------------------------------------ backlight
+
+    /** Called by painting.js. Only our own pages are ever loaded (see shouldOverrideUrlLoading). */
+    private inner class Bridge {
+        @JavascriptInterface
+        fun setBrightness(level: Double) {
+            runOnUiThread { setBacklight(level) }
+        }
+    }
+
+    /**
+     * Sets this window's backlight level (0..1). Android applies it while the painting is
+     * on screen and restores the system setting if anything else is shown. Never fully off,
+     * since 0 switches some panels' backlight off entirely.
+     */
+    private fun setBacklight(level: Double) {
+        val attrs = window.attributes
+        attrs.screenBrightness = level.coerceIn(0.02, 1.0).toFloat()
+        window.attributes = attrs
     }
 
     // ------------------------------------------------------------ admin menu

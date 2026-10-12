@@ -47,9 +47,6 @@ class FrameServer(private val context: Context, val port: Int = 8080) {
     private var brightness = 1.0
     private var position = 0.0
 
-    /** Called with the new brightness (0..1) whenever the remote changes it. */
-    var onBrightness: ((Double) -> Unit)? = null
-
     val running get() = socket != null
 
     fun start(): Boolean {
@@ -67,8 +64,6 @@ class FrameServer(private val context: Context, val port: Int = 8080) {
             false
         }
     }
-
-    fun brightness(): Double = synchronized(lock) { brightness }
 
     fun remoteUrl(): String = "http://${lanAddress() ?: "localhost"}:$port/remote"
 
@@ -114,7 +109,6 @@ class FrameServer(private val context: Context, val port: Int = 8080) {
     }
 
     private fun update(patch: JSONObject) {
-        var newBrightness: Double? = null
         synchronized(lock) {
             if (patch.has("paused")) paused = patch.optBoolean("paused")
             val s = patch.optString("seed", "").trim()
@@ -123,14 +117,10 @@ class FrameServer(private val context: Context, val port: Int = 8080) {
                 position = 0.0
             }
             patch.optDouble("speed").takeIf { !it.isNaN() }?.let { speed = it.coerceIn(0.0, 60.0) }
-            patch.optDouble("brightness").takeIf { !it.isNaN() }?.let {
-                brightness = it.coerceIn(0.0, 1.0)
-                newBrightness = brightness
-            }
+            patch.optDouble("brightness").takeIf { !it.isNaN() }?.let { brightness = it.coerceIn(0.0, 1.0) }
         }
         save()
         broadcast("state")
-        newBrightness?.let { b -> onBrightness?.invoke(b) }
     }
 
     // ------------------------------------------------------------------ http

@@ -199,7 +199,14 @@ function apply(s) {
     if (current) newScene(s.seed, s.position || 0);
   }
   for (const k of ["speed", "paused", "brightness", "position"]) if (s[k] !== undefined) settings[k] = s[k];
-  dim.style.opacity = String(1 - Math.max(0, Math.min(1, settings.brightness)));
+  const b = Math.max(0, Math.min(1, settings.brightness));
+  if (window.ShanShuiFrame) {
+    // In the frame app: dim the real backlight rather than darkening the picture.
+    window.ShanShuiFrame.setBrightness(b);
+    dim.style.opacity = "0";
+  } else {
+    dim.style.opacity = String(1 - b);
+  }
 }
 
 function startStandalone() {
