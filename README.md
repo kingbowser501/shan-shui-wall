@@ -87,7 +87,7 @@ Set up on the frame:
 4. Leave it on for half an hour before the first power-cut test, because
    Android saves that permission to disk on a delay.
 
-
+## Raspberry Pi kiosk (alternative setup)
 
 On a Pi 4 or 5 running Raspberry Pi OS (desktop):
 
