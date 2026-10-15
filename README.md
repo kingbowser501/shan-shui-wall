@@ -73,9 +73,12 @@ Build (needs JDK 17 and the Android SDK):
 cd android && ./gradlew assembleRelease
 ```
 
-The APK is `android/app/build/outputs/apk/release/app-release.apk`. It's
-signed with this machine's debug key, so later updates must be built here too
-(or Android will refuse to install them over the old version).
+The APK is `android/app/build/outputs/apk/release/app-release.apk`, signed
+with the release key in `~/.shan-shui-signing/` (or the path in
+`$SHANSHUI_SIGNING`). **Keep a backup of that folder.** Android only installs
+updates signed with the same key, so without it, a new version means
+uninstalling the old one first. Without the key, the build falls back to the
+debug key.
 
 Set up on the frame:
 
