@@ -90,6 +90,12 @@ Set up on the frame:
 4. Leave it on for half an hour before the first power-cut test, because
    Android saves that permission to disk on a delay.
 
+**Huidu signage frames** (the "MagicPlayer" screen): the frame runs a system
+guard that brings its own player back to the front every 180 s. In
+**Settings → Application and service**, set both **"The application starts on
+itself"** and **"Application process guardian"** to **Shan Shui**. The frame
+then boots straight into the painting and restarts it if it ever exits.
+
 ## Raspberry Pi kiosk (alternative setup)
 
 On a Pi 4 or 5 running Raspberry Pi OS (desktop):
