@@ -46,6 +46,10 @@ class FrameServer(private val context: Context, val port: Int = 8080) {
     private var paused = false
     private var brightness = 1.0
     private var position = 0.0
+    private var followSun = true // ease brightness with sunrise/sunset (daylight.js)
+    private var nightHold = true // midnight to 6:00: faint glow, drift at rest
+    private var lat = 37.7749 // San Francisco
+    private var lon = -122.4194
 
     val running get() = socket != null
 
@@ -83,6 +87,10 @@ class FrameServer(private val context: Context, val port: Int = 8080) {
                 paused = j.optBoolean("paused", paused)
                 brightness = j.optDouble("brightness", brightness)
                 position = j.optDouble("position", position)
+                followSun = j.optBoolean("followSun", followSun)
+                nightHold = j.optBoolean("nightHold", nightHold)
+                lat = j.optDouble("lat", lat)
+                lon = j.optDouble("lon", lon)
             }
         } catch (_: Exception) {
             // first run, or unreadable: keep defaults
@@ -102,6 +110,10 @@ class FrameServer(private val context: Context, val port: Int = 8080) {
         put("paused", paused)
         put("brightness", brightness)
         put("position", position)
+        put("followSun", followSun)
+        put("nightHold", nightHold)
+        put("lat", lat)
+        put("lon", lon)
         if (public) {
             put("displays", clients.count { it.display })
             put("remoteUrl", remoteUrl())
@@ -111,6 +123,10 @@ class FrameServer(private val context: Context, val port: Int = 8080) {
     private fun update(patch: JSONObject) {
         synchronized(lock) {
             if (patch.has("paused")) paused = patch.optBoolean("paused")
+            if (patch.has("followSun")) followSun = patch.optBoolean("followSun")
+            if (patch.has("nightHold")) nightHold = patch.optBoolean("nightHold")
+            patch.optDouble("lat").takeIf { !it.isNaN() }?.let { lat = it.coerceIn(-90.0, 90.0) }
+            patch.optDouble("lon").takeIf { !it.isNaN() }?.let { lon = it.coerceIn(-180.0, 180.0) }
             val s = patch.optString("seed", "").trim()
             if (s.isNotEmpty()) {
                 seed = s.take(64)

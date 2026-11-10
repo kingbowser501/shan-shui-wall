@@ -83,6 +83,16 @@
   }
   .seed button { padding: 10px 14px; min-height: 0; }
   .small { font-size: 13px; color: var(--muted); }
+  .toggle { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 6px 0; }
+  .toggle + .toggle { border-top: 1px solid var(--line); padding-top: 12px; margin-top: 6px; }
+  .toggle .hint { display: block; font-size: 13px; color: var(--muted); }
+  .switch { position: relative; width: 50px; height: 30px; flex: none; }
+  .switch input { position: absolute; opacity: 0; width: 100%; height: 100%; margin: 0; cursor: pointer; }
+  .switch span { position: absolute; inset: 0; border-radius: 15px; background: var(--line); transition: background 0.2s; pointer-events: none; }
+  .switch span::after { content: ""; position: absolute; top: 3px; left: 3px; width: 24px; height: 24px; border-radius: 50%; background: var(--paper); box-shadow: 0 1px 2px rgba(0,0,0,0.3); transition: transform 0.2s; }
+  .switch input:checked + span { background: var(--ink); }
+  .switch input:checked + span::after { transform: translateX(20px); }
+  .switch input:focus-visible + span { outline: 2px solid var(--seal); outline-offset: 2px; }
   .links { display: flex; justify-content: space-between; align-items: center; }
   .links button { padding: 8px 12px; min-height: 0; font-size: 14px; }
 </style>
@@ -106,6 +116,18 @@
     <input type="range" id="bright" min="10" max="100" step="1">
   </div>
 
+  <div class="card">
+    <div class="row"><label>Daylight</label><span class="val" id="lightVal"></span></div>
+    <div class="toggle">
+      <label for="sun">Follow the sun<span class="hint">Full by day, dimmer after sunset</span></label>
+      <span class="switch"><input type="checkbox" id="sun" role="switch"><span></span></span>
+    </div>
+    <div class="toggle">
+      <label for="hold">Night hold<span class="hint">Midnight to 6 am: a faint glow, the scroll at rest</span></label>
+      <span class="switch"><input type="checkbox" id="hold" role="switch"><span></span></span>
+    </div>
+  </div>
+
   <button class="new" id="new">Paint a new landscape</button>
 
   <div class="card">
@@ -122,6 +144,7 @@
   </div>
 </main>
 
+<script src="daylight.js"></script>
 <script>
 "use strict";
 const $ = (id) => document.getElementById(id);
@@ -153,12 +176,24 @@ function render() {
   if (editing !== "speed") $("speed").value = fromSpeed(state.speed);
   if (editing !== "bright") $("bright").value = Math.round(state.brightness * 100);
   $("speedVal").textContent = speedLabel(toSpeed(+$("speed").value));
-  $("brightVal").textContent = $("bright").value + "%";
+  $("brightVal").textContent = $("bright").value + "%" + (state.followSun || state.nightHold ? " max" : "");
+  $("sun").checked = !!state.followSun;
+  $("hold").checked = !!state.nightHold;
+  renderLight();
   if (document.activeElement !== $("seed")) $("seed").value = state.seed;
   const on = state.displays > 0;
   $("dot").classList.toggle("on", on);
   $("status").textContent = on ? (state.displays > 1 ? `${state.displays} displays` : "Display on") : "No display";
 }
+
+// What the frame is doing right now, from the same schedule it runs.
+function renderLight() {
+  if (state.seed === undefined) return;
+  const l = Daylight.at(new Date(), { ...state, brightness: +$("bright").value / 100 });
+  const still = state.paused ? " · paused" : l.motion < 1 ? ` · drift ${Math.round(l.motion * 100)}%` : "";
+  $("lightVal").textContent = `${l.phase} · ${Math.round(l.level * 100)}%${still}`;
+}
+setInterval(renderLight, 30000);
 
 let pending = null;
 function sendSoon(patch) {
@@ -171,6 +206,8 @@ $("new").onclick = () => post("api/new");
 $("go").onclick = () => $("seed").value.trim() && post("api/state", { seed: $("seed").value.trim() });
 $("seed").onkeydown = (e) => e.key === "Enter" && $("go").click();
 $("reload").onclick = () => post("api/reload");
+$("sun").onchange = () => post("api/state", { followSun: $("sun").checked });
+$("hold").onchange = () => post("api/state", { nightHold: $("hold").checked });
 
 for (const [id, key, conv] of [["speed", "speed", toSpeed], ["bright", "brightness", (v) => v / 100]]) {
   const el = $(id);

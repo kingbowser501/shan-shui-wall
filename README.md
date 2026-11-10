@@ -27,7 +27,8 @@ There are no dependencies. Node 18 or later is enough.
 | `public/engine.js` | The original generator, extracted from `upstream/index.html` by `scripts/extract-engine.mjs`. Don't edit it by hand. |
 | `public/worker.js` | Generates the world in a Web Worker and paints it into 512-unit tiles on an `OffscreenCanvas`, from only the brush strokes that cross each tile. Each chunk is reseeded from `seed@x`, so the painting can resume from any position. |
 | `public/painting.js` | Receives finished bitmaps (zero-copy), places them side by side in one strip, and drifts it with a GPU transform. The main thread does almost nothing per frame, which keeps it smooth on slow chips. Crossfades to a new landscape when the seed changes. |
-| `public/remote.html` | Phone remote: play/pause, drift speed, brightness, new landscape, enter a seed, reload display. |
+| `public/daylight.js` | The light schedule. With **Follow the sun** on, brightness eases from full by day to 50% after sunset, using sunrise and sunset for the configured location (San Francisco by default). With **Night hold** on, from midnight to 6:00 it settles to a faint 5% glow and the drift comes to rest, easing in and out over 20 minutes. The remote's brightness slider sets the maximum. |
+| `public/remote.html` | Phone remote: play/pause, drift speed, brightness, the daylight switches, new landscape, enter a seed, reload display. |
 | `server.js` | Static server, `/api/*` endpoints, and live updates over Server-Sent Events. Saves state to `data/state.json`, so a reboot resumes the same landscape at the same spot. |
 
 The painting also runs without the server, for example on static hosting or a
@@ -42,6 +43,8 @@ Live (static, no remote): https://kingbowser501.github.io/shan-shui-wall/
 | `speed` | Drift in world units per second (default 6, about one screen every 3.5 minutes) |
 | `brightness` | 0–1 |
 | `res` | Render scale below 1 (e.g. `0.75`) for slow hardware |
+| `sun`, `hold` | `1` turns on Follow the sun / Night hold (the servers default both to on) |
+| `lat`, `lon` | Location for sunrise and sunset (default San Francisco) |
 | `test` | Shows a performance overlay: frame rate, tile generation and paint times, and whether the drift ever waited for tiles |
 
 ## Testing new hardware

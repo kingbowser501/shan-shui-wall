@@ -7,7 +7,7 @@
 //
 // Settings come from the wall server (/api/state, live over /api/events).
 // Without a server the page still runs, configured by URL parameters:
-//   ?seed=abc&speed=6&brightness=1&res=0.75
+//   ?seed=abc&speed=6&brightness=1&res=0.75&sun=1&hold=1
 // Add ?test to show a performance overlay for checking new hardware.
 
 "use strict";
@@ -23,7 +23,12 @@ const settings = {
   paused: params.get("paused") === "1",
   brightness: Number(params.get("brightness") || 1),
   position: Number(params.get("x") || 0),
+  followSun: params.get("sun") === "1", // ease the light with sunrise and sunset (daylight.js)
+  nightHold: params.get("hold") === "1", // midnight to 6:00: a faint glow, drift at rest
+  lat: Number(params.get("lat") || 37.7749), // San Francisco
+  lon: Number(params.get("lon") || -122.4194),
 };
+let light = { level: 1, motion: 1, phase: "day" }; // from Daylight.at(), refreshed every few seconds
 let serverMode = false;
 
 const stage = document.getElementById("stage");
@@ -147,7 +152,7 @@ let last = performance.now();
 function frame(now) {
   const dt = Math.min(0.25, (now - last) / 1000);
   last = now;
-  const dx = settings.paused ? 0 : settings.speed * dt;
+  const dx = settings.paused ? 0 : settings.speed * light.motion * dt;
 
   current.request(current.x);
   if (incoming) incoming.request(incoming.x);
@@ -198,16 +203,24 @@ function apply(s) {
     settings.seed = s.seed;
     if (current) newScene(s.seed, s.position || 0);
   }
-  for (const k of ["speed", "paused", "brightness", "position"]) if (s[k] !== undefined) settings[k] = s[k];
-  const b = Math.max(0, Math.min(1, settings.brightness));
+  for (const k of ["speed", "paused", "brightness", "position", "followSun", "nightHold", "lat", "lon"]) {
+    if (s[k] !== undefined) settings[k] = s[k];
+  }
+  updateLight();
+}
+
+// Brightness = the remote's slider, shaped by the daylight schedule when it's on.
+function updateLight() {
+  light = Daylight.at(new Date(), settings);
   if (window.ShanShuiFrame) {
     // In the frame app: dim the real backlight rather than darkening the picture.
-    window.ShanShuiFrame.setBrightness(b);
+    window.ShanShuiFrame.setBrightness(light.level);
     dim.style.opacity = "0";
   } else {
-    dim.style.opacity = String(1 - b);
+    dim.style.opacity = String(1 - light.level);
   }
 }
+setInterval(updateLight, 5000); // small steps; the schedule's ramps last 20+ minutes
 
 function startStandalone() {
   if (!current) start(settings.seed, settings.position);
@@ -303,6 +316,8 @@ const stats = {
       `tiles ${t.length}  ·  last gen ${last ? last.gen : "-"} / paint ${last ? last.draw : "-"} ms`,
       `avg gen ${mean("gen")} / paint ${mean("draw")} / insert ${mean("insert")} ms  ·  max gen ${max("gen")} / paint ${max("draw")}`,
       `budget: a new tile every ${secs.toFixed(0)} s at speed ${settings.speed}`,
+      `light: ${light.phase} · level ${Math.round(light.level * 100)}% · motion ${Math.round(light.motion * 100)}%` +
+        (settings.followSun || settings.nightHold ? "" : " (schedule off)"),
       `waited for tiles ${this.stalls}×, ${(this.stallMs / 1000).toFixed(1)} s total`,
       `cores ${navigator.hardwareConcurrency || "?"}  ·  memory ${navigator.deviceMemory || "?"} GB`,
       navigator.userAgent,

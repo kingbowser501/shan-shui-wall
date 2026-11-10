@@ -15,8 +15,19 @@ const PORT = Number(process.env.PORT || 8080);
 const PUBLIC = path.join(__dirname, "public");
 const STATE_FILE = path.join(__dirname, "data", "state.json");
 
-const DEFAULTS = { seed: newSeed(), speed: 6, paused: false, brightness: 1, position: 0 };
-const LIMITS = { speed: [0, 60], brightness: [0, 1] };
+const DEFAULTS = {
+  seed: newSeed(),
+  speed: 6,
+  paused: false,
+  brightness: 1,
+  position: 0,
+  followSun: true, // ease brightness with sunrise/sunset (public/daylight.js)
+  nightHold: true, // midnight to 6:00: faint glow, drift at rest
+  lat: 37.7749, // San Francisco
+  lon: -122.4194,
+};
+const LIMITS = { speed: [0, 60], brightness: [0, 1], lat: [-90, 90], lon: [-180, 180] };
+const FLAGS = ["paused", "followSun", "nightHold"];
 
 let state = { ...DEFAULTS, ...readJSON(STATE_FILE) };
 const displays = new Set(); // SSE responses from painting pages
@@ -70,7 +81,7 @@ function broadcast(event = "state") {
 
 function update(patch) {
   for (const [k, v] of Object.entries(patch)) {
-    if (k === "paused") state.paused = Boolean(v);
+    if (FLAGS.includes(k)) state[k] = Boolean(v);
     else if (k === "seed" && typeof v === "string" && v.trim()) {
       state.seed = v.trim().slice(0, 64);
       state.position = 0;
