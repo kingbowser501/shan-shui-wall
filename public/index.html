@@ -48,6 +48,37 @@
     transition: opacity 2s;
     pointer-events: none;
   }
+  /* Night hold: near-black, with a dim clock. Sits above the painting, the dimmer and the hint. */
+  #night {
+    position: fixed;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    background: #0c0b0a;
+    opacity: 0;
+    transition: opacity 5s linear;
+    pointer-events: none;
+    font-family: "Iowan Old Style", Palatino, Georgia, "Noto Serif", serif;
+  }
+  #night .clock {
+    text-align: center;
+    transition: transform 60s ease-in-out; /* slow nudges so static text never ghosts */
+  }
+  #night .time {
+    font-size: 15vh;
+    line-height: 1;
+    color: #46423b;
+    font-variant-numeric: lining-nums tabular-nums;
+    letter-spacing: 0.02em;
+  }
+  #night .date {
+    margin-top: 2.5vh;
+    font-size: 3.4vh;
+    color: #34312c;
+    letter-spacing: 0.06em;
+  }
   #stats {
     position: fixed;
     top: 12px;
@@ -68,6 +99,7 @@
 <div id="stage"></div>
 <div id="dim"></div>
 <div id="hint"></div>
+<div id="night"><div class="clock"><div class="time"></div><div class="date"></div></div></div>
 <pre id="stats" hidden></pre>
 <script src="daylight.js"></script>
 <script src="painting.js"></script>

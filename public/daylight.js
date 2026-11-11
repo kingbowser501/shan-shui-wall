@@ -3,7 +3,8 @@
 //   day      full brightness
 //   dusk     eases down to the evening level around sunset
 //   evening  dimmer, still drifting
-//   hold     after midnight: fades to a very low glow and the drift comes to rest
+//   hold     after midnight: the painting fades into a near-black night screen with a
+//            dim clock, the backlight drops to almost nothing, the drift comes to rest
 //   dawn     at 6:00 the drift resumes; brightness rises through sunrise
 //
 // Shared by painting.js (which applies it) and remote.html (which shows it).
@@ -13,7 +14,7 @@
 "use strict";
 
 const Daylight = (() => {
-  const LEVELS = { day: 1, evening: 0.5, hold: 0.05 }; // backlight multipliers; hold is absolute
+  const LEVELS = { day: 1, evening: 0.5, hold: 0.03 }; // backlight multipliers; hold is absolute
   const DUSK = [-30, 45]; // minutes around sunset over which day eases to evening
   const DAWN = [-45, 30]; // minutes around sunrise over which evening eases to day
   const HOLD = { start: 0, end: 6, ramp: 20 }; // hours (local), ramp in minutes
@@ -76,7 +77,8 @@ const Daylight = (() => {
 
   /**
    * opts: {brightness (the remote's slider, 0..1), followSun, nightHold, lat, lon}
-   * returns {level: backlight 0..1, motion: drift multiplier 0..1, phase: label}
+   * returns {level: backlight 0..1, motion: drift multiplier 0..1,
+   *          night: night screen opacity 0..1, phase: label}
    */
   function at(now, opts) {
     const user = Math.max(0, Math.min(1, opts.brightness ?? 1));
@@ -90,7 +92,7 @@ const Daylight = (() => {
     else if (h > 0) phase = minutes(now) < 12 * 60 && minutes(now) >= HOLD.end * 60 ? "waking" : "settling";
     else if (s <= 0) phase = now.getHours() >= 12 ? "evening" : "before dawn";
     else if (s < 1) phase = now.getHours() < 12 ? "dawn" : "dusk";
-    return { level, motion: 1 - h, phase };
+    return { level, motion: 1 - h, night: h, phase };
   }
 
   return { at, sunTimes, LEVELS, HOLD };

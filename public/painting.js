@@ -210,8 +210,15 @@ function apply(s) {
 }
 
 // Brightness = the remote's slider, shaped by the daylight schedule when it's on.
+const night = document.getElementById("night");
 function updateLight() {
-  light = Daylight.at(new Date(), settings);
+  const now = new Date();
+  light = Daylight.at(now, settings);
+  night.style.opacity = String(light.night);
+  if (light.night > 0) {
+    night.querySelector(".time").textContent = now.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
+    night.querySelector(".date").textContent = now.toLocaleDateString([], { weekday: "long", month: "long", day: "numeric" });
+  }
   if (window.ShanShuiFrame) {
     // In the frame app: dim the real backlight rather than darkening the picture.
     window.ShanShuiFrame.setBrightness(light.level);
@@ -221,6 +228,12 @@ function updateLight() {
   }
 }
 setInterval(updateLight, 5000); // small steps; the schedule's ramps last 20+ minutes
+
+// Every 10 minutes, drift the night clock a little so its text never sits in one place for hours.
+setInterval(() => {
+  const r = () => (Math.random() * 2 - 1) * 3;
+  night.querySelector(".clock").style.transform = `translate(${r()}vw, ${r()}vh)`;
+}, 600000);
 
 function startStandalone() {
   if (!current) start(settings.seed, settings.position);
