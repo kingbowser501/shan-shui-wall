@@ -126,6 +126,20 @@ class MainActivity : Activity() {
         fun setBrightness(level: Double) {
             runOnUiThread { setBacklight(level) }
         }
+
+        /** True if the app may switch the screen off (device admin granted). */
+        @JavascriptInterface
+        fun canSleep(): Boolean = ScreenControl.canTurnOff(this@MainActivity)
+
+        /** Screen fully off until wakeAt (epoch ms). Returns false if not allowed. */
+        @JavascriptInterface
+        fun sleepUntil(wakeAt: Double): Boolean = ScreenControl.sleepUntil(this@MainActivity, wakeAt.toLong())
+
+        @JavascriptInterface
+        fun wake() = runOnUiThread { ScreenControl.wake(this@MainActivity) }
+
+        @JavascriptInterface
+        fun isScreenOn(): Boolean = ScreenControl.isOn(this@MainActivity)
     }
 
     /**
@@ -166,6 +180,9 @@ class MainActivity : Activity() {
         if (!Settings.canDrawOverlays(this)) {
             items += "Allow starting after a power cut" to { openOverlaySettings() }
         }
+        if (!ScreenControl.canTurnOff(this)) {
+            items += "Allow turning the screen off at night" to { askForScreenOff() }
+        }
         items += "Choose home screen" to { startActivity(Intent(Settings.ACTION_HOME_SETTINGS)) }
         items += "Close Shan Shui" to { finishAndRemoveTask() }
 
@@ -199,6 +216,17 @@ class MainActivity : Activity() {
             .setPositiveButton("Open setting") { _, _ -> openOverlaySettings() }
             .setNegativeButton("Not now", null)
             .show()
+    }
+
+    private fun askForScreenOff() {
+        startActivity(
+            Intent(android.app.admin.DevicePolicyManager.ACTION_ADD_DEVICE_ADMIN)
+                .putExtra(android.app.admin.DevicePolicyManager.EXTRA_DEVICE_ADMIN, ScreenControl.admin(this))
+                .putExtra(
+                    android.app.admin.DevicePolicyManager.EXTRA_ADD_EXPLANATION,
+                    "Lets Shan Shui switch the screen fully off from midnight to 6 am.",
+                )
+        )
     }
 
     private fun openOverlaySettings() {

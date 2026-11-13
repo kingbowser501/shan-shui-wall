@@ -4,7 +4,8 @@
 //   dusk     eases down to the evening level around sunset
 //   evening  dimmer, still drifting
 //   hold     after midnight: the painting fades into a near-black night screen with a
-//            dim clock, the backlight drops to almost nothing, the drift comes to rest
+//            dim clock and the drift comes to rest; then, in the frame app, the screen
+//            switches fully off until 6:00
 //   dawn     at 6:00 the drift resumes; brightness rises through sunrise
 //
 // Shared by painting.js (which applies it) and remote.html (which shows it).
@@ -78,7 +79,7 @@ const Daylight = (() => {
   /**
    * opts: {brightness (the remote's slider, 0..1), followSun, nightHold, lat, lon}
    * returns {level: backlight 0..1, motion: drift multiplier 0..1,
-   *          night: night screen opacity 0..1, phase: label}
+   *          night: night screen opacity 0..1, deep: screen may switch off, phase: label}
    */
   function at(now, opts) {
     const user = Math.max(0, Math.min(1, opts.brightness ?? 1));
@@ -92,10 +93,24 @@ const Daylight = (() => {
     else if (h > 0) phase = minutes(now) < 12 * 60 && minutes(now) >= HOLD.end * 60 ? "waking" : "settling";
     else if (s <= 0) phase = now.getHours() >= 12 ? "evening" : "before dawn";
     else if (s < 1) phase = now.getHours() < 12 ? "dawn" : "dusk";
-    return { level, motion: 1 - h, night: h, phase };
+    const deep = !!opts.nightHold && isDeepNight(now);
+    return { level, motion: 1 - h, night: h, deep, phase };
   }
 
-  return { at, sunTimes, LEVELS, HOLD };
+  // Fully into the night hold (after the fade, before 6:00): when the frame switches its screen off.
+  function isDeepNight(now) {
+    const m = minutes(now);
+    return m >= HOLD.start * 60 + HOLD.ramp && m < HOLD.end * 60;
+  }
+
+  // The next end of the night hold (6:00 local), today or tomorrow.
+  function wakeTime(now) {
+    const t = new Date(now.getFullYear(), now.getMonth(), now.getDate(), HOLD.end);
+    if (t <= now) t.setDate(t.getDate() + 1);
+    return t;
+  }
+
+  return { at, sunTimes, wakeTime, LEVELS, HOLD };
 })();
 
 if (typeof module !== "undefined") module.exports = Daylight;

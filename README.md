@@ -27,7 +27,7 @@ There are no dependencies. Node 18 or later is enough.
 | `public/engine.js` | The original generator, extracted from `upstream/index.html` by `scripts/extract-engine.mjs`. Don't edit it by hand. |
 | `public/worker.js` | Generates the world in a Web Worker and paints it into 512-unit tiles on an `OffscreenCanvas`, from only the brush strokes that cross each tile. Each chunk is reseeded from `seed@x`, so the painting can resume from any position. |
 | `public/painting.js` | Receives finished bitmaps (zero-copy), places them side by side in one strip, and drifts it with a GPU transform. The main thread does almost nothing per frame, which keeps it smooth on slow chips. Crossfades to a new landscape when the seed changes. |
-| `public/daylight.js` | The light schedule. With **Follow the sun** on, brightness eases from full by day to 50% after sunset, using sunrise and sunset for the configured location (San Francisco by default). With **Night hold** on, from midnight to 6:00 the painting fades into a near-black night screen with a dim clock and date, the backlight drops to 3%, and the drift comes to rest, easing in and out over 20 minutes. The clock shifts a few pixels every 10 minutes so the text never ghosts. The remote's brightness slider sets the maximum. |
+| `public/daylight.js` | The light schedule. With **Follow the sun** on, brightness eases from full by day to 50% after sunset, using sunrise and sunset for the configured location (San Francisco by default). With **Night hold** on, at midnight the painting fades over 20 minutes into a near-black night screen with a dim clock and date, and the drift comes to rest. In the frame app the screen then **switches fully off until 6:00**, when it wakes and fades back to the painting. Turning Night hold off from the remote wakes it early. Elsewhere, such as a browser, the dim clock stays up all night (backlight 3%, shifting a few pixels every 10 minutes so the text never ghosts). The remote's brightness slider sets the maximum. |
 | `public/remote.html` | Phone remote: play/pause, drift speed, brightness, the daylight switches, new landscape, enter a seed, reload display. |
 | `server.js` | Static server, `/api/*` endpoints, and live updates over Server-Sent Events. Saves state to `data/state.json`, so a reboot resumes the same landscape at the same spot. |
 
@@ -67,6 +67,9 @@ frame on Android 14). It makes the frame self-contained:
   startup and in the admin menu.
 - **Dims the real backlight** when you lower brightness on the remote, rather
   than darkening the picture.
+- **Switches the screen fully off at night** (Night hold), using Android's
+  device-admin "lock now", and wakes it at 6:00 with an alarm. A partial wake
+  lock keeps Wi-Fi up overnight so the remote can wake it early.
 - **Admin menu:** tap the top-left corner 5 times for the remote address,
   reload, Wi-Fi and Android settings, and exit.
 
@@ -92,12 +95,19 @@ Set up on the frame:
    Shan Shui, or choose it as the home screen from the admin menu.
 4. Leave it on for half an hour before the first power-cut test, because
    Android saves that permission to disk on a delay.
+5. To let it switch the screen off at night, open the admin menu and choose
+   **Allow turning the screen off at night**, or run
+   `adb shell "dpm set-active-admin --user 0 'io.github.kingbowser501.shanshui/.ScreenControl\$AdminReceiver'"`.
+   (To uninstall the app later, first remove it under Settings → Security →
+   Device admin apps.)
 
 **Huidu signage frames** (the "MagicPlayer" screen): the frame runs a system
 guard that brings its own player back to the front every 180 s. In
 **Settings → Application and service**, set both **"The application starts on
 itself"** and **"Application process guardian"** to **Shan Shui**. The frame
 then boots straight into the painting and restarts it if it ever exits.
+Leave the frame's own **Timer screen** setting disabled: in testing it never
+switched the screen off, and Night hold handles this instead.
 
 ## Raspberry Pi kiosk (alternative setup)
 

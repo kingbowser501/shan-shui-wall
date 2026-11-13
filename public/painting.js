@@ -215,6 +215,7 @@ function updateLight() {
   const now = new Date();
   light = Daylight.at(now, settings);
   night.style.opacity = String(light.night);
+  screenOffAtNight(now);
   if (light.night > 0) {
     night.querySelector(".time").textContent = now.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
     night.querySelector(".date").textContent = now.toLocaleDateString([], { weekday: "long", month: "long", day: "numeric" });
@@ -228,6 +229,20 @@ function updateLight() {
   }
 }
 setInterval(updateLight, 5000); // small steps; the schedule's ramps last 20+ minutes
+
+// In the frame app, once the midnight fade is done the screen switches fully off until 6:00
+// (the app sets an alarm). Turning night hold off from the remote wakes it early.
+let asleep = false;
+function screenOffAtNight(now) {
+  const frame = window.ShanShuiFrame;
+  if (!frame || !frame.sleepUntil) return;
+  if (light.deep && !asleep) {
+    asleep = frame.sleepUntil(Daylight.wakeTime(now).valueOf());
+  } else if (!light.deep && asleep) {
+    asleep = false;
+    frame.wake();
+  }
+}
 
 // Every 10 minutes, drift the night clock a little so its text never sits in one place for hours.
 setInterval(() => {
