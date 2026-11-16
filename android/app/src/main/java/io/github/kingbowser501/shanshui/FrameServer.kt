@@ -47,7 +47,7 @@ class FrameServer(private val context: Context, val port: Int = 8080) {
     private var brightness = 1.0
     private var position = 0.0
     private var followSun = true // ease brightness with sunrise/sunset (daylight.js)
-    private var nightHold = true // midnight to 6:00: faint glow, drift at rest
+    private var nightHold = true // 22:00 to 6:00: screen dark, drift at rest
     private var lat = 37.7749 // San Francisco
     private var lon = -122.4194
 

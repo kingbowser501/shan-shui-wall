@@ -3,9 +3,9 @@
 //   day      full brightness
 //   dusk     eases down to the evening level around sunset
 //   evening  dimmer, still drifting
-//   hold     after midnight: the painting fades into a near-black night screen with a
-//            dim clock and the drift comes to rest; then, in the frame app, the screen
-//            switches fully off until 6:00
+//   hold     from 21:40 the painting fades into a near-black night screen with a
+//            dim clock and the drift comes to rest; at 22:00, in the frame app, the
+//            screen switches fully off until 6:00
 //   dawn     at 6:00 the drift resumes; brightness rises through sunrise
 //
 // Shared by painting.js (which applies it) and remote.html (which shows it).
@@ -18,7 +18,9 @@ const Daylight = (() => {
   const LEVELS = { day: 1, evening: 0.5, hold: 0.03 }; // backlight multipliers; hold is absolute
   const DUSK = [-30, 45]; // minutes around sunset over which day eases to evening
   const DAWN = [-45, 30]; // minutes around sunrise over which evening eases to day
-  const HOLD = { start: 0, end: 6, ramp: 20 }; // hours (local), ramp in minutes
+  // Hours (local): the screen is dark from `off` to `on`; the fade takes `ramp` minutes
+  // before `off` and after `on`. May span midnight.
+  const HOLD = { off: 22, on: 6, ramp: 20 };
 
   const rad = Math.PI / 180;
   const DAY_MS = 864e5;
@@ -54,15 +56,19 @@ const Daylight = (() => {
   const lerp = (a, b, t) => a + (b - a) * t;
   const minutes = (d) => d.getHours() * 60 + d.getMinutes() + d.getSeconds() / 60;
 
+  // Minutes since the fade into the hold began, and how long until the hold ends (6:00).
+  const DAY_MIN = 24 * 60;
+  const wrap = (m) => ((m % DAY_MIN) + DAY_MIN) % DAY_MIN;
+  const sinceFade = (now) => wrap(minutes(now) - (HOLD.off * 60 - HOLD.ramp));
+  const HOLD_LEN = wrap(HOLD.on * 60 - (HOLD.off * 60 - HOLD.ramp)); // fade start to 6:00
+
   // How far into the night hold we are: 0 awake, 1 fully held.
   function holdAmount(now) {
-    const m = minutes(now);
-    const start = HOLD.start * 60;
-    const end = HOLD.end * 60;
-    if (m < start || m >= end + HOLD.ramp) return 0;
-    if (m < start + HOLD.ramp) return smooth((m - start) / HOLD.ramp);
-    if (m < end) return 1;
-    return 1 - smooth((m - end) / HOLD.ramp);
+    const t = sinceFade(now);
+    if (t < HOLD.ramp) return smooth(t / HOLD.ramp);
+    if (t < HOLD_LEN) return 1;
+    if (t < HOLD_LEN + HOLD.ramp) return 1 - smooth((t - HOLD_LEN) / HOLD.ramp);
+    return 0;
   }
 
   // 1 in full daylight, 0 at night, eased through dusk and dawn.
@@ -90,22 +96,22 @@ const Daylight = (() => {
 
     let phase = "day";
     if (h >= 1) phase = "night hold";
-    else if (h > 0) phase = minutes(now) < 12 * 60 && minutes(now) >= HOLD.end * 60 ? "waking" : "settling";
+    else if (h > 0) phase = sinceFade(now) < HOLD.ramp ? "settling" : "waking";
     else if (s <= 0) phase = now.getHours() >= 12 ? "evening" : "before dawn";
     else if (s < 1) phase = now.getHours() < 12 ? "dawn" : "dusk";
     const deep = !!opts.nightHold && isDeepNight(now);
     return { level, motion: 1 - h, night: h, deep, phase };
   }
 
-  // Fully into the night hold (after the fade, before 6:00): when the frame switches its screen off.
+  // Fully into the night hold (22:00 to 6:00): when the frame switches its screen off.
   function isDeepNight(now) {
-    const m = minutes(now);
-    return m >= HOLD.start * 60 + HOLD.ramp && m < HOLD.end * 60;
+    const t = sinceFade(now);
+    return t >= HOLD.ramp && t < HOLD_LEN;
   }
 
   // The next end of the night hold (6:00 local), today or tomorrow.
   function wakeTime(now) {
-    const t = new Date(now.getFullYear(), now.getMonth(), now.getDate(), HOLD.end);
+    const t = new Date(now.getFullYear(), now.getMonth(), now.getDate(), HOLD.on);
     if (t <= now) t.setDate(t.getDate() + 1);
     return t;
   }

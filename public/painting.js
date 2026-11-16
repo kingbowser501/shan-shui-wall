@@ -24,7 +24,7 @@ const settings = {
   brightness: Number(params.get("brightness") || 1),
   position: Number(params.get("x") || 0),
   followSun: params.get("sun") === "1", // ease the light with sunrise and sunset (daylight.js)
-  nightHold: params.get("hold") === "1", // midnight to 6:00: a faint glow, drift at rest
+  nightHold: params.get("hold") === "1", // 22:00 to 6:00: screen dark, drift at rest
   lat: Number(params.get("lat") || 37.7749), // San Francisco
   lon: Number(params.get("lon") || -122.4194),
 };
@@ -230,7 +230,7 @@ function updateLight() {
 }
 setInterval(updateLight, 5000); // small steps; the schedule's ramps last 20+ minutes
 
-// In the frame app, once the midnight fade is done the screen switches fully off until 6:00
+// In the frame app, once the evening fade is done (22:00) the screen switches fully off until 6:00
 // (the app sets an alarm). Turning night hold off from the remote wakes it early.
 let asleep = false;
 function screenOffAtNight(now) {

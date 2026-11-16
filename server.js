@@ -22,7 +22,7 @@ const DEFAULTS = {
   brightness: 1,
   position: 0,
   followSun: true, // ease brightness with sunrise/sunset (public/daylight.js)
-  nightHold: true, // midnight to 6:00: faint glow, drift at rest
+  nightHold: true, // 22:00 to 6:00: screen dark, drift at rest
   lat: 37.7749, // San Francisco
   lon: -122.4194,
 };

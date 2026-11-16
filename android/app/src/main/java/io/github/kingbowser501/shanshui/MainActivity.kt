@@ -236,7 +236,7 @@ class MainActivity : Activity() {
                 .putExtra(android.app.admin.DevicePolicyManager.EXTRA_DEVICE_ADMIN, ScreenControl.admin(this))
                 .putExtra(
                     android.app.admin.DevicePolicyManager.EXTRA_ADD_EXPLANATION,
-                    "Lets Shan Shui switch the screen fully off from midnight to 6 am.",
+                    "Lets Shan Shui switch the screen fully off from 10 pm to 6 am.",
                 )
         )
     }
