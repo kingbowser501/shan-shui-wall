@@ -106,6 +106,9 @@ guard that brings its own player back to the front every 180 s. In
 **Settings → Application and service**, set both **"The application starts on
 itself"** and **"Application process guardian"** to **Shan Shui**. The frame
 then boots straight into the painting and restarts it if it ever exits.
+Also, in **Display and brightness**, switch on **Hide status bar** and **Hide
+navigation bar** (leave "Allow sliding up" on as a way back in). Otherwise the
+bars can reappear when the screen wakes in the morning.
 Leave the frame's own **Timer screen** setting disabled: in testing it never
 switched the screen off, and Night hold handles this instead.
 

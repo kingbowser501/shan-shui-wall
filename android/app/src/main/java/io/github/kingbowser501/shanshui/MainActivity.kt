@@ -2,7 +2,10 @@ package io.github.kingbowser501.shanshui
 
 import android.app.Activity
 import android.app.AlertDialog
+import android.content.BroadcastReceiver
+import android.content.Context
 import android.content.Intent
+import android.content.IntentFilter
 import android.graphics.Color
 import android.net.Uri
 import android.os.Build
@@ -36,6 +39,13 @@ import androidx.webkit.WebViewAssetLoader
 class MainActivity : Activity() {
 
     private var web: WebView? = null
+
+    // Waking from the night screen-off can bring the system bars back; hide them again.
+    private val screenOn = object : BroadcastReceiver() {
+        override fun onReceive(context: Context, intent: Intent) {
+            for (delay in longArrayOf(300, 1500, 4000)) window.decorView.postDelayed({ hideSystemBars() }, delay)
+        }
+    }
     private val taps = ArrayList<Long>()
 
     private val assets by lazy {
@@ -50,6 +60,7 @@ class MainActivity : Activity() {
         WebView.setWebContentsDebuggingEnabled(true) // chrome://inspect over USB, for troubleshooting
         showPainting()
         maybeAskForAutoStart()
+        registerReceiver(screenOn, IntentFilter(Intent.ACTION_SCREEN_ON))
     }
 
     override fun onResume() {
@@ -66,6 +77,7 @@ class MainActivity : Activity() {
     override fun onBackPressed() {}
 
     override fun onDestroy() {
+        unregisterReceiver(screenOn)
         web?.destroy()
         super.onDestroy()
     }
